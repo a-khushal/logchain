@@ -1,0 +1,15 @@
+# LogChain – Tamper-Proof Server Logs on Solana
+
+## Problem
+Server logs are the #1 forensic evidence in breaches — but they're mutable. Attackers erase tracks. Auditors can't trust logs. No system proves integrity post-incident.
+
+## Solution
+LogChain hashes every log line, builds a Merkle tree, and anchors the root to Solana every 100 entries. Tampering breaks the chain — instantly detectable and provable.
+
+## Tech Stack
+- Off-chain: Node.js + merkletreejs
+- On-chain: Anchor (Rust) + Solana
+- Frontend: React + Solana Wallet Adapter
+
+## Live Demo
+https://logchain.vercel.app (devnet)
