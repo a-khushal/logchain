@@ -21,7 +21,10 @@ pub mod logchain {
         );
 
         require!(server_id.len() <= 32, LogChainError::ServerIdTooLong);
-        require!(log_count > 0 && log_count <= 1000, LogChainError::InvalidLogCount);
+        require!(
+            log_count > 0 && log_count <= 1000,
+            LogChainError::InvalidLogCount
+        );
 
         trail.root = root;
         trail.batch_id = batch_id;
@@ -44,7 +47,10 @@ pub mod logchain {
 
     pub fn close_trail(ctx: Context<CloseTrail>) -> Result<()> {
         let trail = &ctx.accounts.trail;
-        require!(trail.authority == ctx.accounts.authority.key(), LogChainError::Unauthorized);
+        require!(
+            trail.authority == ctx.accounts.authority.key(),
+            LogChainError::Unauthorized
+        );
         Ok(())
     }
 }
