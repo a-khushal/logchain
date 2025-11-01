@@ -97,37 +97,44 @@ export default function LogManagement({ serverId }: { serverId: string }) {
 function LogStream({ serverId, onLogCountChange }: { serverId: string; onLogCountChange: (count: number) => void }) {
     const [logs, setLogs] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(false)
+    const [showLoading, setShowLoading] = useState(false)
     const fetchLogEntries = useFetchLogEntries()
 
     useEffect(() => {
         let isMounted = true
+        let loadingTimeoutId: NodeJS.Timeout
+        let fetchTimeoutId: NodeJS.Timeout
 
         const fetchLogs = async () => {
             if (!serverId) return
-            setIsLoading(true)
+
+            loadingTimeoutId = setTimeout(() => {
+                if (isMounted) setShowLoading(true)
+            }, 500)
+
             try {
                 const entries = await fetchLogEntries(serverId)
                 if (isMounted) {
                     setLogs(entries)
                     onLogCountChange(entries.length)
+                    setShowLoading(false)
                 }
             } catch (err) {
                 console.error("Failed to fetch logs:", err)
-            } finally {
-                if (isMounted) {
-                    setIsLoading(false)
-                }
+                if (isMounted) setShowLoading(false)
             }
         }
 
-        fetchLogs()
+        fetchTimeoutId = setTimeout(fetchLogs, 400)
 
         return () => {
             isMounted = false
+            clearTimeout(loadingTimeoutId)
+            clearTimeout(fetchTimeoutId)
         }
     }, [serverId, fetchLogEntries, onLogCountChange])
 
-    if (isLoading && logs.length === 0) {
+    if (showLoading && logs.length === 0) {
         return (
             <div className="border border-border p-4 bg-card h-64 text-foreground">
                 <h3 className="text-accent font-mono text-sm font-bold mb-3">[LOG STREAM]</h3>
@@ -256,8 +263,8 @@ function BatchAnchorCard({ serverId, logCount }: { serverId: string; logCount: n
     const entriesAnchored = trail.entriesAnchored.toNumber ? trail.entriesAnchored.toNumber() : Number(trail.entriesAnchored)
     const newLogCount = logCount - entriesAnchored
     const rootHashStr = Array.isArray(trail.rootHash)
-        ? Buffer.from(trail.rootHash).toString('hex').slice(0, 16)
-        : trail.rootHash?.toString().slice(0, 16) || "0000000000000000"
+        ? Buffer.from(trail.rootHash).toString('hex')
+        : trail.rootHash?.toString() || "0000000000000000000000000000000000000000000000000000000000000000"
 
     return (
         <div className="border border-border p-4 bg-card text-foreground">
@@ -268,7 +275,7 @@ function BatchAnchorCard({ serverId, logCount }: { serverId: string; logCount: n
                 <div className="text-foreground">Entries Anchored: {entriesAnchored}</div>
                 <div className="text-foreground">Total Logs: {logCount}</div>
                 <div className="text-foreground">New Logs: {newLogCount}</div>
-                <div className="truncate text-foreground">Root: {rootHashStr}...</div>
+                <div className="truncate text-foreground">Root: {rootHashStr}</div>
                 {error && <div className="text-destructive">{error}</div>}
                 <button
                     onClick={handleAnchorBatch}

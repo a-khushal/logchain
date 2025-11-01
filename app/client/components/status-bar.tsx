@@ -27,7 +27,7 @@ export default function StatusBar({ autoScroll, onAutoScrollToggle }: StatusBarP
                             : "bg-secondary border-border hover:bg-secondary/80"
                         }`}
                 >
-                    {autoScroll ? "⬇ Auto-Scroll" : "⬇ Auto-Scroll"}
+                    {autoScroll ? "Auto-Scroll" : "Auto-Scroll"}
                 </button>
                 <button className="px-3 py-1 bg-secondary border border-border rounded hover:bg-secondary/80 transition-colors font-bold">
                     Close Trail
