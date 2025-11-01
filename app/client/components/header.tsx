@@ -1,30 +1,33 @@
 "use client"
 
-interface HeaderProps {
-  onConnect: () => void
-  isConnected: boolean
-}
+import dynamic from "next/dynamic";
 
-export default function Header({ onConnect, isConnected }: HeaderProps) {
-  return (
-    <header className="border-b border-[#2a2a2a] px-6 py-4 bg-[#0f0f0f] flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-[#10b981] rounded flex items-center justify-center">
-          <span className="text-[#0f0f0f] font-bold text-sm">⛓</span>
-        </div>
-        <h1 className="text-2xl font-bold text-white">LogChain</h1>
-      </div>
+const WalletMultiButton = dynamic(
+    () =>
+        import('@solana/wallet-adapter-react-ui').then(
+            (mod) => mod.WalletMultiButton
+        ),
+    { ssr: false }
+);
 
-      <button
-        onClick={onConnect}
-        className={`px-4 py-2 rounded border text-sm font-medium transition-colors ${
-          isConnected
-            ? "bg-[#10b981] text-[#0f0f0f] border-[#10b981]"
-            : "bg-[#1a1a1a] text-[#e5e5e5] border-[#2a2a2a] hover:border-[#10b981]"
-        }`}
-      >
-        {isConnected ? "✓ Connected" : "Connect Wallet"}
-      </button>
-    </header>
-  )
+export default function Header() {
+    return (
+        <header className="border-b border-[#2a2a2a] px-6 py-3 bg-[#0f0f0f] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-[#10b981] rounded flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        className="w-5 h-5">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <rect x="14" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                </div>
+                <h1 className="text-2xl font-bold text-white">LogChain</h1>
+            </div>
+
+            <WalletMultiButton />
+        </header>
+    )
 }

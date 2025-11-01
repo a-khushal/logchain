@@ -8,16 +8,17 @@ import ProofPanel from "@/components/proof-panel"
 import StatusBar from "@/components/status-bar"
 import LogDetailModal from "@/components/log-detail-modal"
 import { generateMockLogs, type LogEntry } from "@/lib/mock-data"
+import { useWallet } from "@solana/wallet-adapter-react"
 
 export default function Home() {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [selectedServer, setSelectedServer] = useState("web-01")
-  const [isConnected, setIsConnected] = useState(false)
   const [autoScroll, setAutoScroll] = useState(true)
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [tamperDetected, setTamperDetected] = useState(false)
   const [tamperLineIndex, setTamperLineIndex] = useState<number | null>(null)
+  const { connected } = useWallet()
 
   useEffect(() => {
     setLogs(generateMockLogs(50))
@@ -46,19 +47,27 @@ export default function Home() {
     }
   }
 
-  const handleWalletConnect = () => {
-    setIsConnected(!isConnected)
-    if (!isConnected) {
-      setTimeout(() => {
-        setTamperDetected(true)
-        setTamperLineIndex(Math.floor(Math.random() * logs.length))
-      }, 500)
+  useEffect(() => {
+    if (connected) {
+      setTamperDetected(true)
+      setTamperLineIndex(Math.floor(Math.random() * logs.length))
     }
-  }
+  }, [connected, logs.length])
+
+  if (!connected) {
+    return (
+      <div className="flex flex-col h-screen bg-[#0f0f0f] text-white">
+        <Header />
+        <div className="flex-1 flex justify-center items-center text-white text-xl">
+          Connect your wallet.
+        </div>
+      </div>
+    );
+  }  
 
   return (
     <div className="flex flex-col h-screen bg-[#0f0f0f]">
-      <Header onConnect={handleWalletConnect} isConnected={isConnected} />
+      <Header />
 
       <div className="flex flex-1 overflow-hidden gap-0">
         <Sidebar selectedServer={selectedServer} onServerChange={setSelectedServer} logsCount={logs.length} />
@@ -75,7 +84,10 @@ export default function Home() {
           </div>
 
           <div className="w-80 overflow-hidden md:w-full md:h-64">
-            <ProofPanel isConnected={isConnected} tamperDetected={tamperDetected} />
+            <ProofPanel 
+              isConnected={connected} 
+              tamperDetected={tamperDetected} 
+            />
           </div>
         </div>
       </div>
@@ -84,7 +96,7 @@ export default function Home() {
         tamperDetected={tamperDetected}
         autoScroll={autoScroll}
         onToggleScroll={() => setAutoScroll(!autoScroll)}
-        isConnected={isConnected}
+        isConnected={connected}
       />
 
       {showModal && selectedLog && <LogDetailModal log={selectedLog} onClose={() => setShowModal(false)} />}
