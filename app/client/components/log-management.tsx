@@ -10,7 +10,7 @@ import {
     useFetchAuditTrail
 } from "@/hooks/useLogchain"
 
-export default function LogManagement({ serverId }: { serverId: string }) {
+export default function LogManagement({ serverId, isActive = true }: { serverId: string; isActive?: boolean }) {
     const [logMessage, setLogMessage] = useState("")
     const [logLevel, setLogLevel] = useState("INFO")
     const [isAdding, setIsAdding] = useState(false)
@@ -18,12 +18,6 @@ export default function LogManagement({ serverId }: { serverId: string }) {
     const [logCount, setLogCount] = useState(0)
     const { connected } = useWallet()
     const addLogEntry = useAddLogEntry()
-
-    useEffect(() => {
-        setLogMessage("")
-        setLogLevel("INFO")
-        setError(null)
-    }, [serverId])
 
     const handleAddLog = useCallback(async () => {
         if (!logMessage.trim()) {
@@ -43,13 +37,20 @@ export default function LogManagement({ serverId }: { serverId: string }) {
 
             await addLogEntry(serverId, Buffer.from(logData))
             setLogMessage("")
-            setError(null)
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to add log entry")
         } finally {
             setIsAdding(false)
         }
     }, [logMessage, logLevel, serverId, addLogEntry])
+
+    if (!isActive) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-destructive font-mono text-sm">Server is not active</div>
+            </div>
+        )
+    }
 
     return (
         <div key={serverId} className="flex flex-col h-full space-y-4">
@@ -96,7 +97,6 @@ export default function LogManagement({ serverId }: { serverId: string }) {
 
 function LogStream({ serverId, onLogCountChange }: { serverId: string; onLogCountChange: (count: number) => void }) {
     const [logs, setLogs] = useState<any[]>([])
-    const [isLoading, setIsLoading] = useState(false)
     const [showLoading, setShowLoading] = useState(false)
     const fetchLogEntries = useFetchLogEntries()
 

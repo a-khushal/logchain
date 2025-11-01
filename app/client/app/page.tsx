@@ -1,17 +1,45 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Header from "@/components/header"
 import ProofPanel from "@/components/proof-panel"
 import StatusBar from "@/components/status-bar"
 import ServerManagement from "@/components/server-management"
 import LogManagement from "@/components/log-management"
 import { useWallet } from "@solana/wallet-adapter-react"
+import { useFetchAllServers } from "@/hooks/useLogchain"
 
 export default function Home() {
   const [selectedServer, setSelectedServer] = useState<string | null>(null)
+  const [servers, setServers] = useState<any[]>([])
   const [autoScroll, setAutoScroll] = useState(true)
-  const { connected } = useWallet();
+  const { connected } = useWallet()
+  const fetchAllServers = useFetchAllServers()
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadServers = async () => {
+      if (!connected) return
+      try {
+        const serverList = await fetchAllServers()
+        if (isMounted) {
+          setServers(serverList)
+        }
+      } catch (err) {
+        console.error("Failed to load servers:", err)
+      }
+    }
+
+    loadServers()
+
+    return () => {
+      isMounted = false
+    }
+  }, [connected, fetchAllServers])
+
+  const selectedServerData = servers.find(s => s.serverId === selectedServer)
+  const isServerActive = selectedServerData?.isActive ?? false
 
   if (!connected) {
     return (
@@ -34,7 +62,7 @@ export default function Home() {
         </div>
         <div className="flex-1 flex flex-col border border-border rounded overflow-hidden">
           {selectedServer ? (
-            <LogManagement serverId={selectedServer} />
+            <LogManagement serverId={selectedServer} isActive={isServerActive} />
           ) : (
             <div className="flex items-center justify-center text-muted-foreground">
               Select a server to view logs
@@ -47,7 +75,12 @@ export default function Home() {
         </div>
       </div>
 
-      <StatusBar autoScroll={autoScroll} onAutoScrollToggle={() => setAutoScroll(!autoScroll)} />
+      <StatusBar
+        autoScroll={autoScroll}
+        onAutoScrollToggle={() => setAutoScroll(!autoScroll)}
+        selectedServer={selectedServer}
+        isActive={isServerActive}
+      />
     </div>
   )
 }
