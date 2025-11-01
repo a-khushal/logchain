@@ -45,34 +45,34 @@ export default function LogManagement({ serverId }: { serverId: string }) {
 
     return (
         <div className="flex flex-col h-full space-y-4">
-            <div className="border border-gray-700 p-4 bg-black">
-                <h3 className="text-green-500 font-mono text-sm font-bold mb-3">[ADD LOG ENTRY]</h3>
+            <div className="border border-border p-4 bg-card">
+                <h3 className="text-accent font-mono text-sm font-bold mb-3">[ADD LOG ENTRY]</h3>
                 <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                         <select
                             value={logLevel}
                             onChange={(e) => setLogLevel(e.target.value)}
-                            className="bg-black border border-gray-700 text-white px-2 py-1 text-xs font-mono"
+                            className="bg-card border border-border text-foreground px-2 py-1 text-xs font-mono"
                             disabled={!connected || isAdding}
                         >
                             <option value="INFO">INFO</option>
                             <option value="WARNING">WARNING</option>
                             <option value="ERROR">ERROR</option>
                         </select>
-                        <div className="text-xs text-gray-500 ml-auto">{logMessage.length}/1024</div>
+                        <div className="text-xs text-muted-foreground ml-auto">{logMessage.length}/1024</div>
                     </div>
                     <textarea
                         value={logMessage}
                         onChange={(e) => setLogMessage(e.target.value.slice(0, 1024))}
                         placeholder="Enter log message..."
-                        className="w-full h-24 p-2 bg-black border border-gray-700 text-white font-mono text-sm disabled:opacity-50"
+                        className="w-full h-24 p-2 border border-border text-foreground font-mono text-sm disabled:opacity-50 bg-black"
                         disabled={!connected || isAdding}
                     />
-                    {error && <div className="text-red-500 text-xs">{error}</div>}
+                    {error && <div className="p-3 text-destructive text-xs font-mono">{error}</div>}
                     <button
                         onClick={handleAddLog}
                         disabled={!connected || isAdding || !logMessage.trim()}
-                        className="px-4 py-2 bg-green-500 text-black font-mono text-sm font-bold hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                        className="px-4 py-2 bg-accent text-accent-foreground font-mono text-sm font-bold hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed w-full transition-colors border border-accent"
                     >
                         {isAdding ? "ADDING..." : "ADD LOG"}
                     </button>
@@ -120,18 +120,18 @@ function LogStream({ serverId }: { serverId: string }) {
 
     if (isLoading && logs.length === 0) {
         return (
-            <div className="border border-gray-700 p-4 bg-black h-64">
-                <h3 className="text-green-500 font-mono text-sm font-bold mb-3">[LOG STREAM]</h3>
-                <div className="text-gray-500 text-sm">Loading logs...</div>
+            <div className="border border-border p-4 bg-card h-64 text-foreground">
+                <h3 className="text-accent font-mono text-sm font-bold mb-3">[LOG STREAM]</h3>
+                <div className="text-muted-foreground text-sm">Loading logs...</div>
             </div>
         )
     }
 
     return (
-        <div className="border border-gray-700 p-4 bg-black h-64 overflow-y-auto">
-            <h3 className="text-green-500 font-mono text-sm font-bold mb-3">[LOG STREAM]</h3>
+        <div className="border border-border p-4 bg-card h-64 overflow-y-auto text-foreground">
+            <h3 className="text-accent font-mono text-sm font-bold mb-3">[LOG STREAM]</h3>
             {logs.length === 0 ? (
-                <div className="text-gray-500 text-sm">No log entries found</div>
+                <div className="p-3 text-muted-foreground text-xs font-mono">No log entries found</div>
             ) : (
                 <div className="space-y-1">
                     {logs.map((log, i) => (
@@ -144,14 +144,14 @@ function LogStream({ serverId }: { serverId: string }) {
 }
 
 function LogEntry({ log }: { log: any }) {
-    let levelColor = "text-gray-400"
+    let levelColor = "text-muted-foreground"
     let levelText = "INFO"
 
     if (log.level === "WARNING") {
-        levelColor = "text-yellow-400"
+        levelColor = "text-warning"
         levelText = "WARNING"
     } else if (log.level === "ERROR") {
-        levelColor = "text-red-400"
+        levelColor = "text-destructive"
         levelText = "ERROR"
     }
 
@@ -159,10 +159,10 @@ function LogEntry({ log }: { log: any }) {
     const entryHashShort = log.entryHash?.slice(0, 12).toString() || "?"
 
     return (
-        <div className="font-mono text-xs border-b border-gray-800 pb-1">
-            <span className="text-gray-500">[{timestamp}]</span>
+        <div className="font-mono text-xs border-b border-border/50 pb-1">
+            <span className="text-muted-foreground">[{timestamp}]</span>
             <span className={`${levelColor} font-bold ml-2`}>{levelText.padEnd(7)}</span>
-            <span className="text-white ml-2">[{entryHashShort}]</span>
+            <span className="text-foreground ml-2">[{entryHashShort}]</span>
         </div>
     )
 }
@@ -219,9 +219,9 @@ function BatchAnchorCard({ serverId }: { serverId: string }) {
 
     if (!trail) {
         return (
-            <div className="border border-gray-700 p-4 bg-black">
-                <h3 className="text-green-500 font-mono text-sm font-bold mb-3">[ANCHOR BATCH]</h3>
-                <div className="text-gray-500 text-sm">Loading batch info...</div>
+            <div className="border border-border p-4 bg-card">
+                <h3 className="text-accent font-mono text-sm font-bold mb-3">[ANCHOR BATCH]</h3>
+                <div className="text-muted-foreground text-sm">Loading batch info...</div>
             </div>
         )
     }
@@ -233,17 +233,17 @@ function BatchAnchorCard({ serverId }: { serverId: string }) {
         : trail.rootHash.toString().slice(0, 16)
 
     return (
-        <div className="border border-gray-700 p-4 bg-black">
-            <h3 className="text-green-500 font-mono text-sm font-bold mb-3">[ANCHOR BATCH]</h3>
-            <div className="space-y-2 text-xs font-mono">
-                <div>Batch ID: {batchId}</div>
-                <div>Entries: {entriesCount}</div>
-                <div className="truncate">Root: {rootHashStr}...</div>
-                {error && <div className="text-red-500">{error}</div>}
+        <div className="border border-border p-4 bg-card text-foreground">
+            <h3 className="text-accent font-mono text-sm font-bold mb-3">[ANCHOR BATCH]</h3>
+            <div className="space-y-2 text-xs font-mono text-foreground">
+                <div className="text-foreground">Batch ID: {batchId}</div>
+                <div className="text-foreground">Entries: {entriesCount}</div>
+                <div className="truncate text-foreground">Root: {rootHashStr}...</div>
+                {error && <div className="text-destructive">{error}</div>}
                 <button
                     onClick={handleAnchorBatch}
                     disabled={isAnchoring || entriesCount === 0}
-                    className="mt-2 px-4 py-2 bg-green-500 text-black font-mono text-sm font-bold hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                    className="mt-2 px-4 py-2 bg-accent text-accent-foreground font-mono text-sm font-bold hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed w-full transition-colors border border-accent"
                 >
                     {isAnchoring ? "ANCHORING..." : "ANCHOR BATCH"}
                 </button>

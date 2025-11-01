@@ -86,32 +86,33 @@ export const useRegisterServer = () => {
 }
 
 export const useAddLogEntry = () => {
-    const program = useProgram()
-    const { publicKey } = useWallet()
+    const program = useProgram();
+    const { publicKey } = useWallet();
 
-    return useCallback(
-        async (serverId: string, entryData: Buffer) => {
-            if (!program || !publicKey) throw new Error("Wallet not connected")
-            const [serverPDA] = PublicKey.findProgramAddressSync(
-                [Buffer.from("server"), Buffer.from(serverId)],
-                program.programId
-            )
-            const logEntryKeypair = Keypair.generate()
-            const tx = await program.methods
-                .addLogEntry(Buffer.from(entryData))
-                .accountsStrict({
-                    serverAccount: serverPDA,
-                    logEntry: logEntryKeypair.publicKey,
-                    authority: publicKey,
-                    systemProgram: SystemProgram.programId,
-                })
-                .signers([logEntryKeypair])
-                .rpc()
-            return { tx, logEntryPDA: logEntryKeypair.publicKey }
-        },
-        [program, publicKey]
-    )
-}
+    return useCallback(async (serverId: string, entryData: Buffer) => {
+        if (!program || !publicKey) throw new Error('Wallet not connected');
+
+        const [serverPDA] = PublicKey.findProgramAddressSync(
+            [Buffer.from('server'), Buffer.from(serverId)],
+            program.programId
+        );
+
+        const logEntryKeypair = Keypair.generate();
+
+        const tx = await program.methods
+            .addLogEntry(entryData)
+            .accountsStrict({
+                serverAccount: serverPDA,
+                logEntry: logEntryKeypair.publicKey,
+                authority: publicKey,
+                systemProgram: SystemProgram.programId,
+            })
+            .signers([logEntryKeypair])
+            .rpc();
+
+        return { tx, logEntryPDA: logEntryKeypair.publicKey };
+    }, [program, publicKey]);
+};
 
 export const useAnchorBatch = () => {
     const program = useProgram()
