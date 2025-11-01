@@ -16,6 +16,7 @@ export default function LogManagement({ serverId, isActive = true }: { serverId:
     const [isAdding, setIsAdding] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [logCount, setLogCount] = useState(0)
+    const [refetchTrigger, setRefetchTrigger] = useState(0)
     const { connected } = useWallet()
     const addLogEntry = useAddLogEntry()
 
@@ -37,6 +38,8 @@ export default function LogManagement({ serverId, isActive = true }: { serverId:
 
             await addLogEntry(serverId, Buffer.from(logData))
             setLogMessage("")
+            // Trigger refetch after successful log entry
+            setRefetchTrigger(prev => prev + 1)
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to add log entry")
         } finally {
@@ -88,14 +91,14 @@ export default function LogManagement({ serverId, isActive = true }: { serverId:
                 </div>
             </div>
 
-            <LogStream serverId={serverId} onLogCountChange={setLogCount} />
+            <LogStream serverId={serverId} onLogCountChange={setLogCount} refetchTrigger={refetchTrigger} />
 
-            <BatchAnchorCard serverId={serverId} logCount={logCount} />
+            <BatchAnchorCard serverId={serverId} logCount={logCount} refetchTrigger={refetchTrigger} />
         </div>
     )
 }
 
-function LogStream({ serverId, onLogCountChange }: { serverId: string; onLogCountChange: (count: number) => void }) {
+function LogStream({ serverId, onLogCountChange, refetchTrigger }: { serverId: string; onLogCountChange: (count: number) => void; refetchTrigger: number }) {
     const [logs, setLogs] = useState<any[]>([])
     const [showLoading, setShowLoading] = useState(false)
     const fetchLogEntries = useFetchLogEntries()
@@ -132,7 +135,7 @@ function LogStream({ serverId, onLogCountChange }: { serverId: string; onLogCoun
             clearTimeout(loadingTimeoutId)
             clearTimeout(fetchTimeoutId)
         }
-    }, [serverId, fetchLogEntries, onLogCountChange])
+    }, [serverId, fetchLogEntries, onLogCountChange, refetchTrigger])
 
     if (showLoading && logs.length === 0) {
         return (
@@ -183,7 +186,7 @@ function LogEntry({ log }: { log: any }) {
     )
 }
 
-function BatchAnchorCard({ serverId, logCount }: { serverId: string; logCount: number }) {
+function BatchAnchorCard({ serverId, logCount, refetchTrigger }: { serverId: string; logCount: number; refetchTrigger: number }) {
     const [isAnchoring, setIsAnchoring] = useState(false)
     const [trail, setTrail] = useState<any>(null)
     const [error, setError] = useState<string | null>(null)
@@ -210,7 +213,7 @@ function BatchAnchorCard({ serverId, logCount }: { serverId: string; logCount: n
         return () => {
             isMounted = false
         }
-    }, [serverId, fetchAuditTrail])
+    }, [serverId, fetchAuditTrail, refetchTrigger])
 
     const handleAnchorBatch = useCallback(async () => {
         if (!trail || isAnchoring || logCount === 0) return

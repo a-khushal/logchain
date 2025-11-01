@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRegisterServer } from "@/hooks/useLogchain"
 import { useWallet } from "@solana/wallet-adapter-react"
 
@@ -20,28 +20,36 @@ export default function RegisterServerModal({ onClose, onSuccess }: RegisterServ
   const [error, setError] = useState<string | null>(null)
   const registerServer = useRegisterServer()
   const { connected } = useWallet()
+  const submitInProgressRef = useRef(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (submitInProgressRef.current) return
+    submitInProgressRef.current = true
+
     if (!connected) {
       setError("Wallet not connected")
+      submitInProgressRef.current = false
       return
     }
 
     if (!formData.serverId.trim()) {
       setError("Server ID is required")
+      submitInProgressRef.current = false
       return
     }
 
     if (!formData.description.trim()) {
       setError("Description is required")
+      submitInProgressRef.current = false
       return
     }
 
     const stakeAmount = parseFloat(formData.stake)
     if (isNaN(stakeAmount) || stakeAmount < 0.1) {
       setError("Stake must be at least 0.1 SOL")
+      submitInProgressRef.current = false
       return
     }
 
@@ -59,6 +67,7 @@ export default function RegisterServerModal({ onClose, onSuccess }: RegisterServ
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to register server")
       console.error("Registration error:", err)
+      submitInProgressRef.current = false
     } finally {
       setIsLoading(false)
     }
