@@ -40,6 +40,7 @@
 }
 
 .dark {
+  /* Updated to LogChain monochrome + emerald green theme */
   --background: #0f0f0f;
   --foreground: #e5e5e5;
   --card: #1a1a1a;

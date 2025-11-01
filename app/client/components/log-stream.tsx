@@ -44,13 +44,12 @@ export default function LogStream({ logs, selectedServer, onLogClick, autoScroll
             <div
               key={log.id}
               onClick={() => onLogClick(log, index)}
-              className={`px-4 py-2 border-b border-[#2a2a2a] cursor-pointer transition-colors ${
-                log.tampered
+              className={`px-4 py-2 border-b border-[#2a2a2a] cursor-pointer transition-colors ${log.tampered
                   ? "bg-[#ef4444] bg-opacity-20 text-[#ef4444] hover:bg-opacity-30"
                   : tamperLineIndex === index
                     ? "bg-[#10b981] bg-opacity-10 text-[#e5e5e5] hover:bg-opacity-20"
                     : "text-[#a0a0a0] hover:bg-[#2a2a2a] hover:text-[#e5e5e5]"
-              }`}
+                }`}
               title={`Hash: ${log.hash}`}
             >
               <span className="text-[#808080]">[{log.timestamp}]</span>
@@ -58,13 +57,12 @@ export default function LogStream({ logs, selectedServer, onLogClick, autoScroll
               <span className="ml-2">{log.method}</span>
               <span className="ml-2">{log.endpoint}</span>
               <span
-                className={`ml-2 font-bold ${
-                  log.status >= 200 && log.status < 300
+                className={`ml-2 font-bold ${log.status >= 200 && log.status < 300
                     ? "text-[#10b981]"
                     : log.status >= 400
                       ? "text-[#ef4444]"
                       : "text-[#e5e5e5]"
-                }`}
+                  }`}
               >
                 {log.status}
               </span>

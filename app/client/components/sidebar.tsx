@@ -1,14 +1,22 @@
 "use client"
 
 interface SidebarProps {
+    servers: string[]
     selectedServer: string
     onServerChange: (server: string) => void
+    onRegisterClick: () => void
+    newServerBadges: Set<string>
     logsCount: number
 }
 
-const SERVERS = ["web-01", "api-02", "db-01", "cache-03"]
-
-export default function Sidebar({ selectedServer, onServerChange, logsCount }: SidebarProps) {
+export default function Sidebar({
+    servers,
+    selectedServer,
+    onServerChange,
+    onRegisterClick,
+    newServerBadges,
+    logsCount,
+}: SidebarProps) {
     return (
         <aside className="w-64 border-r border-[#2a2a2a] p-6 bg-[#0f0f0f] overflow-y-auto hidden md:block">
             <div className="space-y-6">
@@ -19,13 +27,22 @@ export default function Sidebar({ selectedServer, onServerChange, logsCount }: S
                         onChange={(e) => onServerChange(e.target.value)}
                         className="mt-3 w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-2 text-[#e5e5e5] text-sm focus:outline-none focus:border-[#10b981]"
                     >
-                        {SERVERS.map((server) => (
+                        {servers.map((server) => (
                             <option key={server} value={server}>
                                 {server}
+                                {newServerBadges.has(server) ? " (NEW)" : ""}
                             </option>
                         ))}
                     </select>
                 </div>
+
+                <button
+                    onClick={onRegisterClick}
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-4 py-2 text-[#e5e5e5] text-sm font-medium hover:bg-[#2a2a2a] transition-colors flex items-center justify-center gap-2"
+                >
+                    <span>+</span>
+                    <span>Register Server</span>
+                </button>
 
                 <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded p-4 space-y-3">
                     <div>
@@ -45,7 +62,7 @@ export default function Sidebar({ selectedServer, onServerChange, logsCount }: S
                 <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded p-4">
                     <p className="text-xs text-[#808080] uppercase tracking-wider mb-2">Authority</p>
                     <div className="bg-[#10b981] bg-opacity-10 border border-[#10b981] rounded px-2 py-1 inline-block">
-                        <p className="text-xs font-medium text-[#10b981]">Owner</p>
+                        <p className="text-xs font-medium text-black">Owner</p>
                     </div>
                 </div>
             </div>

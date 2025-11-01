@@ -48,8 +48,8 @@ export default function LogDetailModal({ log, onClose }: LogDetailModalProps) {
           </div>
           {log.tampered && (
             <div className="mt-4 p-3 bg-[#ef4444] bg-opacity-20 border border-[#ef4444] rounded">
-              <p className="text-[#ef4444] font-bold text-sm">⚠ This log was tampered with</p>
-              <p className="text-[#ef4444] text-xs mt-1">Current hash does not match blockchain record</p>
+              <p className="text-[#e5e5e5] font-bold text-sm">⚠ This log was tampered with</p>
+              <p className="text-[#e5e5e5] text-xs mt-1">Current hash does not match blockchain record</p>
             </div>
           )}
         </div>

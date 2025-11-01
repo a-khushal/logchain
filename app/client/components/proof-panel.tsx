@@ -76,6 +76,7 @@ export default function ProofPanel({ isConnected, tamperDetected }: ProofPanelPr
                         View on Solscan →
                     </a>
                 )}
+
                 <button
                     onClick={handleDownload}
                     className="mt-auto px-4 py-2 bg-[#10b981] text-[#0f0f0f] border border-[#10b981] rounded hover:bg-[#0ea574] transition-colors text-sm font-medium"
