@@ -5,7 +5,7 @@ import { useProgram } from "./useProgram"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { PublicKey, SystemProgram, Keypair } from "@solana/web3.js"
 import { BN } from "@coral-xyz/anchor"
-import pRetry from "p-retry";
+import pRetry from "p-retry"
 
 export interface ServerAccount {
     publicKey: PublicKey
@@ -23,29 +23,29 @@ export interface ServerAccount {
 export const clearServerCache = () => { }
 
 export function useFetchAllServers() {
-    const program = useProgram();
-    const { connected } = useWallet();
+    const program = useProgram()
+    const { connected } = useWallet()
 
     const fetchAllServers = useCallback(async () => {
-        if (!connected) throw new Error("Wallet not connected");
-        if (!program) throw new Error("Program not initialized");
+        if (!connected) throw new Error("Wallet not connected")
+        if (!program) throw new Error("Program not initialized")
 
         const run = async () => {
-            const servers = await program.account.serverAccount.all();
+            const servers = await program.account.serverAccount.all()
             return servers.map((s: any) => ({
                 publicKey: s.publicKey,
                 ...s.account,
-            }));
-        };
+            }))
+        }
 
         return pRetry(run, {
             retries: 5,
             factor: 2,
             minTimeout: 500,
-        });
-    }, [connected, program]);
+        })
+    }, [connected, program])
 
-    return fetchAllServers;
+    return fetchAllServers
 }
 
 export const useRegisterServer = () => {
@@ -86,18 +86,18 @@ export const useRegisterServer = () => {
 }
 
 export const useAddLogEntry = () => {
-    const program = useProgram();
-    const { publicKey } = useWallet();
+    const program = useProgram()
+    const { publicKey } = useWallet()
 
     return useCallback(async (serverId: string, entryData: Buffer) => {
-        if (!program || !publicKey) throw new Error('Wallet not connected');
+        if (!program || !publicKey) throw new Error('Wallet not connected')
 
         const [serverPDA] = PublicKey.findProgramAddressSync(
             [Buffer.from('server'), Buffer.from(serverId)],
             program.programId
-        );
+        )
 
-        const logEntryKeypair = Keypair.generate();
+        const logEntryKeypair = Keypair.generate()
 
         const tx = await program.methods
             .addLogEntry(entryData)
@@ -108,19 +108,20 @@ export const useAddLogEntry = () => {
                 systemProgram: SystemProgram.programId,
             })
             .signers([logEntryKeypair])
-            .rpc();
+            .rpc()
 
-        return { tx, logEntryPDA: logEntryKeypair.publicKey };
-    }, [program, publicKey]);
-};
+        return { tx, logEntryPDA: logEntryKeypair.publicKey }
+    }, [program, publicKey])
+}
 
 export const useAnchorBatch = () => {
     const program = useProgram()
     const { publicKey } = useWallet()
 
     return useCallback(
-        async (serverId: string, batchId: number, logCount: number) => {
+        async (serverId: string, logCount: number) => {
             if (!program || !publicKey) throw new Error("Wallet not connected")
+
             const [serverPDA] = PublicKey.findProgramAddressSync(
                 [Buffer.from("server"), Buffer.from(serverId)],
                 program.programId
@@ -129,6 +130,16 @@ export const useAnchorBatch = () => {
                 [Buffer.from("logchain-trail"), serverPDA.toBuffer()],
                 program.programId
             )
+
+            let trail
+            try {
+                trail = await program.account.auditTrail.fetch(trailPDA)
+            } catch (error) {
+                trail = null
+            }
+
+            const batchId = trail ? (trail.nextBatchId.toNumber ? trail.nextBatchId.toNumber() : Number(trail.nextBatchId)) : 0
+
             const tx = await program.methods
                 .anchorBatch(new BN(batchId), new BN(logCount))
                 .accountsStrict({
@@ -149,26 +160,50 @@ export const useFetchAuditTrail = () => {
     return useCallback(
         async (serverId: string) => {
             if (!program) return null
-            const [serverPDA] = PublicKey.findProgramAddressSync(
-                [Buffer.from("server"), Buffer.from(serverId)],
-                program.programId
-            )
-            const [trailPDA] = PublicKey.findProgramAddressSync(
-                [Buffer.from("logchain-trail"), serverPDA.toBuffer()],
-                program.programId
-            )
-            const trail = await program.account.auditTrail.fetch(trailPDA)
-            return {
-                publicKey: trailPDA,
-                server: trail.server,
-                batchId: trail.batchId,
-                nextBatchId: trail.nextBatchId,
-                rootHash: trail.rootHash,
-                entriesInBatch: trail.entriesInBatch,
-                entriesAnchored: trail.entriesAnchored,
-                timestamp: trail.timestamp,
-                authority: trail.authority,
-                anchorSlot: trail.anchorSlot,
+            try {
+                const [serverPDA] = PublicKey.findProgramAddressSync(
+                    [Buffer.from("server"), Buffer.from(serverId)],
+                    program.programId
+                )
+                const [trailPDA] = PublicKey.findProgramAddressSync(
+                    [Buffer.from("logchain-trail"), serverPDA.toBuffer()],
+                    program.programId
+                )
+                let trail
+                try {
+                    trail = await program.account.auditTrail.fetch(trailPDA)
+                } catch (error) {
+                    if (error instanceof Error && (error.message.includes('Account does not exist') || error.message.includes('no data'))) {
+                        return {
+                            publicKey: trailPDA,
+                            server: serverPDA,
+                            batchId: new BN(0),
+                            nextBatchId: new BN(0),
+                            rootHash: Array(32).fill(0),
+                            entriesInBatch: new BN(0),
+                            entriesAnchored: new BN(0),
+                            timestamp: new BN(0),
+                            authority: serverPDA,
+                            anchorSlot: new BN(0)
+                        }
+                    }
+                    throw error
+                }
+                return {
+                    publicKey: trailPDA,
+                    server: trail.server,
+                    batchId: trail.batchId,
+                    nextBatchId: trail.nextBatchId,
+                    rootHash: trail.rootHash,
+                    entriesInBatch: trail.entriesInBatch,
+                    entriesAnchored: trail.entriesAnchored,
+                    timestamp: trail.timestamp,
+                    authority: trail.authority,
+                    anchorSlot: trail.anchorSlot,
+                }
+            } catch (error) {
+                console.error('Error fetching audit trail:', error)
+                return null
             }
         },
         [program]
@@ -180,9 +215,18 @@ export const useFetchLogEntries = () => {
     return useCallback(
         async (serverId: string) => {
             if (!program) return []
+
+            const [serverPDA] = PublicKey.findProgramAddressSync(
+                [Buffer.from("server"), Buffer.from(serverId)],
+                program.programId
+            )
+
             const logEntries = await program.account.logEntry.all()
             return logEntries
-                .filter((le: any) => le.account.server)
+                .filter((le: any) => {
+                    return le.account.server &&
+                        le.account.server.equals(serverPDA)
+                })
                 .map((le: any) => ({
                     publicKey: le.publicKey,
                     server: le.account.server,

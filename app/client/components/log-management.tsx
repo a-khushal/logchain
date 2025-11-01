@@ -15,8 +15,15 @@ export default function LogManagement({ serverId }: { serverId: string }) {
     const [logLevel, setLogLevel] = useState("INFO")
     const [isAdding, setIsAdding] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [logCount, setLogCount] = useState(0)
     const { connected } = useWallet()
     const addLogEntry = useAddLogEntry()
+
+    useEffect(() => {
+        setLogMessage("")
+        setLogLevel("INFO")
+        setError(null)
+    }, [serverId])
 
     const handleAddLog = useCallback(async () => {
         if (!logMessage.trim()) {
@@ -36,6 +43,7 @@ export default function LogManagement({ serverId }: { serverId: string }) {
 
             await addLogEntry(serverId, Buffer.from(logData))
             setLogMessage("")
+            setError(null)
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to add log entry")
         } finally {
@@ -44,7 +52,7 @@ export default function LogManagement({ serverId }: { serverId: string }) {
     }, [logMessage, logLevel, serverId, addLogEntry])
 
     return (
-        <div className="flex flex-col h-full space-y-4">
+        <div key={serverId} className="flex flex-col h-full space-y-4">
             <div className="border border-border p-4 bg-card">
                 <h3 className="text-accent font-mono text-sm font-bold mb-3">[ADD LOG ENTRY]</h3>
                 <div className="space-y-3">
@@ -79,14 +87,14 @@ export default function LogManagement({ serverId }: { serverId: string }) {
                 </div>
             </div>
 
-            <LogStream serverId={serverId} />
+            <LogStream serverId={serverId} onLogCountChange={setLogCount} />
 
-            <BatchAnchorCard serverId={serverId} />
+            <BatchAnchorCard serverId={serverId} logCount={logCount} />
         </div>
     )
 }
 
-function LogStream({ serverId }: { serverId: string }) {
+function LogStream({ serverId, onLogCountChange }: { serverId: string; onLogCountChange: (count: number) => void }) {
     const [logs, setLogs] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const fetchLogEntries = useFetchLogEntries()
@@ -101,6 +109,7 @@ function LogStream({ serverId }: { serverId: string }) {
                 const entries = await fetchLogEntries(serverId)
                 if (isMounted) {
                     setLogs(entries)
+                    onLogCountChange(entries.length)
                 }
             } catch (err) {
                 console.error("Failed to fetch logs:", err)
@@ -116,7 +125,7 @@ function LogStream({ serverId }: { serverId: string }) {
         return () => {
             isMounted = false
         }
-    }, [serverId, fetchLogEntries])
+    }, [serverId, fetchLogEntries, onLogCountChange])
 
     if (isLoading && logs.length === 0) {
         return (
@@ -129,7 +138,7 @@ function LogStream({ serverId }: { serverId: string }) {
 
     return (
         <div className="border border-border p-4 bg-card h-64 overflow-y-auto text-foreground">
-            <h3 className="text-accent font-mono text-sm font-bold mb-3">[LOG STREAM]</h3>
+            <h3 className="text-accent font-mono text-sm font-bold mb-3">[LOG STREAM] ({logs.length})</h3>
             {logs.length === 0 ? (
                 <div className="p-3 text-muted-foreground text-xs font-mono">No log entries found</div>
             ) : (
@@ -167,7 +176,7 @@ function LogEntry({ log }: { log: any }) {
     )
 }
 
-function BatchAnchorCard({ serverId }: { serverId: string }) {
+function BatchAnchorCard({ serverId, logCount }: { serverId: string; logCount: number }) {
     const [isAnchoring, setIsAnchoring] = useState(false)
     const [trail, setTrail] = useState<any>(null)
     const [error, setError] = useState<string | null>(null)
@@ -197,17 +206,24 @@ function BatchAnchorCard({ serverId }: { serverId: string }) {
     }, [serverId, fetchAuditTrail])
 
     const handleAnchorBatch = useCallback(async () => {
-        if (!trail || isAnchoring) return
+        if (!trail || isAnchoring || logCount === 0) return
 
         setIsAnchoring(true)
         setError(null)
 
         try {
-            const batchId = trail.batchId.toNumber ? trail.batchId.toNumber() : Number(trail.batchId)
-            const logCount = trail.entriesInBatch.toNumber ? trail.entriesInBatch.toNumber() : Number(trail.entriesInBatch)
+            const entriesAnchored = trail.entriesAnchored.toNumber ? trail.entriesAnchored.toNumber() : Number(trail.entriesAnchored)
+            const newLogCount = logCount - entriesAnchored
 
-            await anchorBatch(serverId, batchId, logCount)
+            if (newLogCount <= 0) {
+                setError("No new logs to anchor")
+                setIsAnchoring(false)
+                return
+            }
 
+            await anchorBatch(serverId, newLogCount)
+
+            await new Promise(resolve => setTimeout(resolve, 2000))
             const updatedTrail = await fetchAuditTrail(serverId)
             setTrail(updatedTrail)
         } catch (err) {
@@ -215,34 +231,48 @@ function BatchAnchorCard({ serverId }: { serverId: string }) {
         } finally {
             setIsAnchoring(false)
         }
-    }, [trail, serverId, isAnchoring, anchorBatch, fetchAuditTrail])
+    }, [trail, serverId, isAnchoring, logCount, anchorBatch, fetchAuditTrail])
 
     if (!trail) {
         return (
             <div className="border border-border p-4 bg-card">
                 <h3 className="text-accent font-mono text-sm font-bold mb-3">[ANCHOR BATCH]</h3>
-                <div className="text-muted-foreground text-sm">Loading batch info...</div>
+                <div className="text-muted-foreground text-sm mb-3">Loading batch info...</div>
+                <button
+                    onClick={async () => {
+                        const data = await fetchAuditTrail(serverId)
+                        setTrail(data)
+                    }}
+                    className="px-4 py-2 bg-accent text-accent-foreground font-mono text-sm font-bold hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed w-full transition-colors border border-accent"
+                >
+                    Refresh
+                </button>
             </div>
         )
     }
 
     const batchId = trail.batchId.toNumber ? trail.batchId.toNumber() : Number(trail.batchId)
-    const entriesCount = trail.entriesInBatch.toNumber ? trail.entriesInBatch.toNumber() : Number(trail.entriesInBatch)
+    const nextBatchId = trail.nextBatchId.toNumber ? trail.nextBatchId.toNumber() : Number(trail.nextBatchId)
+    const entriesAnchored = trail.entriesAnchored.toNumber ? trail.entriesAnchored.toNumber() : Number(trail.entriesAnchored)
+    const newLogCount = logCount - entriesAnchored
     const rootHashStr = Array.isArray(trail.rootHash)
         ? Buffer.from(trail.rootHash).toString('hex').slice(0, 16)
-        : trail.rootHash.toString().slice(0, 16)
+        : trail.rootHash?.toString().slice(0, 16) || "0000000000000000"
 
     return (
         <div className="border border-border p-4 bg-card text-foreground">
             <h3 className="text-accent font-mono text-sm font-bold mb-3">[ANCHOR BATCH]</h3>
             <div className="space-y-2 text-xs font-mono text-foreground">
                 <div className="text-foreground">Batch ID: {batchId}</div>
-                <div className="text-foreground">Entries: {entriesCount}</div>
+                <div className="text-foreground">Next Batch: {nextBatchId}</div>
+                <div className="text-foreground">Entries Anchored: {entriesAnchored}</div>
+                <div className="text-foreground">Total Logs: {logCount}</div>
+                <div className="text-foreground">New Logs: {newLogCount}</div>
                 <div className="truncate text-foreground">Root: {rootHashStr}...</div>
                 {error && <div className="text-destructive">{error}</div>}
                 <button
                     onClick={handleAnchorBatch}
-                    disabled={isAnchoring || entriesCount === 0}
+                    disabled={isAnchoring || newLogCount <= 0}
                     className="mt-2 px-4 py-2 bg-accent text-accent-foreground font-mono text-sm font-bold hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed w-full transition-colors border border-accent"
                 >
                     {isAnchoring ? "ANCHORING..." : "ANCHOR BATCH"}
