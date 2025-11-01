@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/logchain.json`.
  */
 export type Logchain = {
-  "address": "EPg3oEpf92FNPecbPfX7vkjjNVbNq6NyAdgPj9thL9Mt",
+  "address": "9zoLvF6r9jcLwYQhvR1SDh6Nwk9NXLNncHCETaHk7sMi",
   "metadata": {
     "name": "logchain",
     "version": "0.1.0",
@@ -14,18 +14,61 @@ export type Logchain = {
   },
   "instructions": [
     {
-      "name": "anchorRoot",
+      "name": "addLogEntry",
       "discriminator": [
-        123,
-        31,
-        186,
-        67,
-        90,
-        205,
-        47,
-        87
+        42,
+        210,
+        137,
+        166,
+        54,
+        34,
+        50,
+        25
       ],
       "accounts": [
+        {
+          "name": "serverAccount",
+          "writable": true
+        },
+        {
+          "name": "logEntry",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "entryData",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "anchorBatch",
+      "discriminator": [
+        140,
+        176,
+        14,
+        153,
+        61,
+        146,
+        232,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "serverAccount",
+          "writable": true
+        },
         {
           "name": "trail",
           "writable": true,
@@ -51,8 +94,8 @@ export type Logchain = {
                 ]
               },
               {
-                "kind": "arg",
-                "path": "serverId"
+                "kind": "account",
+                "path": "serverAccount"
               }
             ]
           }
@@ -69,21 +112,8 @@ export type Logchain = {
       ],
       "args": [
         {
-          "name": "root",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
-        },
-        {
           "name": "batchId",
           "type": "u64"
-        },
-        {
-          "name": "serverId",
-          "type": "string"
         },
         {
           "name": "logCount",
@@ -115,6 +145,114 @@ export type Logchain = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "deactivateServer",
+      "discriminator": [
+        116,
+        58,
+        72,
+        223,
+        17,
+        177,
+        251,
+        145
+      ],
+      "accounts": [
+        {
+          "name": "serverAccount",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "registerServer",
+      "discriminator": [
+        41,
+        21,
+        9,
+        205,
+        172,
+        45,
+        50,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "serverAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  114,
+                  118,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "serverId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "stake",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "serverId",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "verifyEntry",
+      "discriminator": [
+        19,
+        109,
+        48,
+        124,
+        244,
+        122,
+        229,
+        51
+      ],
+      "accounts": [
+        {
+          "name": "logEntry"
+        },
+        {
+          "name": "serverAccount"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -130,9 +268,61 @@ export type Logchain = {
         66,
         26
       ]
+    },
+    {
+      "name": "logEntry",
+      "discriminator": [
+        144,
+        171,
+        70,
+        10,
+        193,
+        153,
+        166,
+        90
+      ]
+    },
+    {
+      "name": "serverAccount",
+      "discriminator": [
+        217,
+        98,
+        62,
+        130,
+        20,
+        150,
+        79,
+        126
+      ]
     }
   ],
   "events": [
+    {
+      "name": "entryVerified",
+      "discriminator": [
+        167,
+        206,
+        88,
+        150,
+        189,
+        128,
+        119,
+        198
+      ]
+    },
+    {
+      "name": "logEntryAdded",
+      "discriminator": [
+        153,
+        33,
+        253,
+        162,
+        226,
+        20,
+        50,
+        162
+      ]
+    },
     {
       "name": "rootAnchored",
       "discriminator": [
@@ -150,23 +340,48 @@ export type Logchain = {
   "errors": [
     {
       "code": 6000,
+      "name": "serverIdTooLong",
+      "msg": "Server ID is too long (max 32 chars)"
+    },
+    {
+      "code": 6001,
+      "name": "descriptionTooLong",
+      "msg": "Description is too long (max 100 chars)"
+    },
+    {
+      "code": 6002,
+      "name": "serverInactive",
+      "msg": "Server is not active"
+    },
+    {
+      "code": 6003,
       "name": "invalidBatchSequence",
       "msg": "Batch ID must be sequential"
     },
     {
-      "code": 6001,
-      "name": "serverIdTooLong",
-      "msg": "Server ID too long (max 32 chars)"
-    },
-    {
-      "code": 6002,
+      "code": 6004,
       "name": "invalidLogCount",
-      "msg": "Log count must be 1-1000"
+      "msg": "Log count must be between 1 and 10000"
     },
     {
-      "code": 6003,
+      "code": 6005,
       "name": "unauthorized",
-      "msg": "Only authority can close"
+      "msg": "Only authority can perform this action"
+    },
+    {
+      "code": 6006,
+      "name": "entryTooLarge",
+      "msg": "Entry too large (max 1024 bytes)"
+    },
+    {
+      "code": 6007,
+      "name": "entryServerMismatch",
+      "msg": "Entry server mismatch"
+    },
+    {
+      "code": 6008,
+      "name": "insufficientEntries",
+      "msg": "Insufficient entries to anchor"
     }
   ],
   "types": [
@@ -176,13 +391,8 @@ export type Logchain = {
         "kind": "struct",
         "fields": [
           {
-            "name": "root",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
+            "name": "server",
+            "type": "pubkey"
           },
           {
             "name": "batchId",
@@ -193,11 +403,20 @@ export type Logchain = {
             "type": "u64"
           },
           {
-            "name": "serverId",
-            "type": "string"
+            "name": "rootHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           },
           {
-            "name": "logCount",
+            "name": "entriesInBatch",
+            "type": "u64"
+          },
+          {
+            "name": "entriesAnchored",
             "type": "u64"
           },
           {
@@ -207,6 +426,115 @@ export type Logchain = {
           {
             "name": "authority",
             "type": "pubkey"
+          },
+          {
+            "name": "anchorSlot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "entryVerified",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "server",
+            "type": "pubkey"
+          },
+          {
+            "name": "entryIndex",
+            "type": "u64"
+          },
+          {
+            "name": "entryHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "verifiedAt",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "logEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "server",
+            "type": "pubkey"
+          },
+          {
+            "name": "entryIndex",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "entryHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "previousHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "dataHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "logEntryAdded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "server",
+            "type": "pubkey"
+          },
+          {
+            "name": "entryIndex",
+            "type": "u64"
+          },
+          {
+            "name": "entryHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
           }
         ]
       }
@@ -217,7 +545,15 @@ export type Logchain = {
         "kind": "struct",
         "fields": [
           {
-            "name": "root",
+            "name": "server",
+            "type": "pubkey"
+          },
+          {
+            "name": "batchId",
+            "type": "u64"
+          },
+          {
+            "name": "rootHash",
             "type": {
               "array": [
                 "u8",
@@ -226,20 +562,65 @@ export type Logchain = {
             }
           },
           {
-            "name": "batchId",
+            "name": "entriesInBatch",
             "type": "u64"
+          },
+          {
+            "name": "entriesAnchored",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "serverAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
           },
           {
             "name": "serverId",
             "type": "string"
           },
           {
-            "name": "logCount",
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "name": "registeredAt",
+            "type": "i64"
+          },
+          {
+            "name": "stake",
             "type": "u64"
           },
           {
-            "name": "timestamp",
-            "type": "i64"
+            "name": "entryCount",
+            "type": "u64"
+          },
+          {
+            "name": "lastEntryHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "lastAnchorSlot",
+            "type": "u64"
           }
         ]
       }

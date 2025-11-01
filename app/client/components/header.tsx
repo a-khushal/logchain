@@ -1,33 +1,39 @@
 "use client"
 
-import dynamic from "next/dynamic";
+interface HeaderProps {
+  walletConnected: boolean
+  onWalletConnect: () => void
+}
 
-const WalletMultiButton = dynamic(
-    () =>
-        import('@solana/wallet-adapter-react-ui').then(
-            (mod) => mod.WalletMultiButton
-        ),
-    { ssr: false }
-);
+export default function Header({ walletConnected, onWalletConnect }: HeaderProps) {
+  return (
+    <header className="border-b border-border px-6 py-4 bg-card">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="font-mono text-xl font-bold text-accent">
+            {"["}LOGCHAIN{"]"}
+          </div>
+          <span className="text-muted-foreground text-sm">Solana Audit Trail Verification</span>
+        </div>
 
-export default function Header() {
-    return (
-        <header className="border-b border-[#2a2a2a] px-6 py-3 bg-[#0f0f0f] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-[#10b981] rounded flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                        stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                        className="w-5 h-5">
-                        <rect x="3" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="3" width="7" height="7" rx="1" />
-                        <rect x="3" y="14" width="7" height="7" rx="1" />
-                        <rect x="14" y="14" width="7" height="7" rx="1" />
-                    </svg>
-                </div>
-                <h1 className="text-2xl font-bold text-white">LogChain</h1>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1 bg-secondary rounded border border-border">
+            <div className="w-2 h-2 rounded-full bg-accent"></div>
+            <span className="text-sm text-muted-foreground font-mono">Devnet</span>
+          </div>
 
-            <WalletMultiButton />
-        </header>
-    )
+          <button
+            onClick={onWalletConnect}
+            className={`px-4 py-2 rounded font-mono text-sm font-bold transition-colors border ${
+              walletConnected
+                ? "bg-accent text-accent-foreground border-accent hover:bg-accent/90"
+                : "bg-secondary text-foreground border-border hover:bg-secondary/80"
+            }`}
+          >
+            {walletConnected ? "✓ Connected" : "Connect Wallet"}
+          </button>
+        </div>
+      </div>
+    </header>
+  )
 }

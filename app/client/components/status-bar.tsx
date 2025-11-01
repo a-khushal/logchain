@@ -1,43 +1,37 @@
 "use client"
 
 interface StatusBarProps {
-    tamperDetected: boolean
     autoScroll: boolean
-    onToggleScroll: () => void
-    isConnected: boolean
+    onAutoScrollToggle: () => void
 }
 
-export default function StatusBar({ tamperDetected, autoScroll, onToggleScroll, isConnected }: StatusBarProps) {
+export default function StatusBar({ autoScroll, onAutoScrollToggle }: StatusBarProps) {
     return (
-        <div className="border-t border-[#2a2a2a] px-6 py-3 bg-[#0f0f0f] flex items-center justify-between text-sm">
+        <div className="border-t border-border bg-card px-4 py-3 flex items-center justify-between font-mono text-xs">
             <div className="flex items-center gap-2">
-                <span
-                    className={`inline-block w-2 h-2 rounded-full ${tamperDetected ? "bg-[#ef4444]" : "bg-[#10b981]"}`}
-                ></span>
-                <span className={tamperDetected ? "text-[#ef4444]" : "text-[#10b981]"}>
-                    {tamperDetected ? "⚠ TAMPERING DETECTED — Line 142 was modified" : "✓ No tampering detected"}
-                </span>
+                <div className="w-2 h-2 rounded-full bg-accent"></div>
+                <span className="text-foreground">Status: All logs verified</span>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 text-muted-foreground">
+                <span>Connected to Devnet</span>
+                <span>{"•"}</span>
+                <span>5 servers registered</span>
+            </div>
+
+            <div className="flex items-center gap-3">
                 <button
-                    onClick={onToggleScroll}
-                    className={`px-3 py-1 rounded border text-xs font-medium transition-colors ${autoScroll
-                            ? "bg-[#10b981] text-[#0f0f0f] border-[#10b981]"
-                            : "bg-[#1a1a1a] border-[#2a2a2a] text-[#e5e5e5] hover:border-[#10b981]"
+                    onClick={onAutoScrollToggle}
+                    className={`px-3 py-1 rounded font-bold transition-colors border ${autoScroll
+                            ? "bg-accent text-accent-foreground border-accent"
+                            : "bg-secondary border-border hover:bg-secondary/80"
                         }`}
                 >
-                    {autoScroll ? "Auto-Scroll: ON" : "Auto-Scroll: OFF"}
+                    {autoScroll ? "⬇ Auto-Scroll" : "⬇ Auto-Scroll"}
                 </button>
-
-                {isConnected && (
-                    <button
-                        disabled
-                        className="px-3 py-1 rounded border border-[#2a2a2a] text-xs font-medium text-[#808080] cursor-not-allowed opacity-50"
-                    >
-                        Close Trail
-                    </button>
-                )}
+                <button className="px-3 py-1 bg-secondary border border-border rounded hover:bg-secondary/80 transition-colors font-bold">
+                    Close Trail
+                </button>
             </div>
         </div>
     )

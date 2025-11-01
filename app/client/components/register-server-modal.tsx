@@ -5,139 +5,86 @@ import type React from "react"
 import { useState } from "react"
 
 interface RegisterServerModalProps {
-    isOpen: boolean
-    onClose: () => void
-    onRegister: (serverId: string, description: string, stake: number) => void
-    existingServers: string[]
+  onClose: () => void
 }
 
-const isValidId = (id: string) => /^[a-z0-9-]+$/i.test(id) && id.length > 0 && id.length <= 32
+export default function RegisterServerModal({ onClose }: RegisterServerModalProps) {
+  const [formData, setFormData] = useState({
+    serverId: "",
+    description: "",
+    stake: "",
+  })
 
-export default function RegisterServerModal({
-    isOpen,
-    onClose,
-    onRegister,
-    existingServers,
-}: RegisterServerModalProps) {
-    const [serverId, setServerId] = useState("")
-    const [description, setDescription] = useState("")
-    const [stake, setStake] = useState("0.01")
-    const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState("")
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Handle Solana program call here
+    console.log("Register server:", formData)
+    onClose()
+  }
 
-    const isValid = isValidId(serverId) && !existingServers.includes(serverId) && Number(stake) >= 0.005
+  return (
+    <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50">
+      <div className="bg-popover border-2 border-accent rounded p-6 w-96 max-w-[90vw] font-mono">
+        <h3 className="text-lg font-bold text-accent mb-4">[REGISTER SERVER]</h3>
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!isValid) return
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs text-muted-foreground block mb-2">Server ID (max 32 chars)</label>
+            <input
+              type="text"
+              maxLength={32}
+              value={formData.serverId}
+              onChange={(e) => setFormData({ ...formData, serverId: e.target.value })}
+              placeholder="srv-001"
+              className="w-full px-3 py-2 bg-secondary border border-border rounded text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent font-mono text-sm"
+            />
+          </div>
 
-        setIsLoading(true)
-        setError("")
+          <div>
+            <label className="text-xs text-muted-foreground block mb-2">Description (max 100 chars)</label>
+            <textarea
+              maxLength={100}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="e.g., Primary API server"
+              className="w-full px-3 py-2 bg-secondary border border-border rounded text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent font-mono text-sm resize-none"
+              rows={3}
+            />
+          </div>
 
-        setTimeout(() => {
-            onRegister(serverId, description, Number(stake))
-            setServerId("")
-            setDescription("")
-            setStake("0.01")
-            setIsLoading(false)
-            onClose()
-        }, 500)
-    }
-
-    if (!isOpen) return null
-
-    return (
-        <>
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
-
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded w-full max-w-md max-h-[90vh] overflow-y-auto">
-                    <div className="sticky top-0 bg-[#1a1a1a] border-b border-[#2a2a2a] p-6 flex items-center justify-between">
-                        <h2 className="text-xl font-semibold text-[#e5e5e5]">Register New Server</h2>
-                        <button onClick={onClose} className="text-[#808080] hover:text-[#e5e5e5] text-xl leading-none">
-                            ×
-                        </button>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                        <div>
-                            <label className="text-xs font-semibold text-[#808080] uppercase tracking-wider">Server ID</label>
-                            <input
-                                type="text"
-                                value={serverId}
-                                onChange={(e) => {
-                                    setServerId(e.target.value)
-                                    setError("")
-                                }}
-                                placeholder="web-01"
-                                maxLength={32}
-                                className="mt-2 w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded px-3 py-2 text-[#e5e5e5] text-sm focus:outline-none focus:border-[#10b981]"
-                            />
-                            <p className="text-xs text-[#808080] mt-1">Alphanumeric and hyphens only</p>
-                            {serverId && !isValidId(serverId) && <p className="text-xs text-[#ef4444] mt-1">Invalid format</p>}
-                            {serverId && existingServers.includes(serverId) && (
-                                <p className="text-xs text-[#ef4444] mt-1">Server already exists</p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="text-xs font-semibold text-[#808080] uppercase tracking-wider">
-                                Description (Optional)
-                            </label>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Main web server – Frankfurt"
-                                rows={3}
-                                className="mt-2 w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded px-3 py-2 text-[#e5e5e5] text-sm focus:outline-none focus:border-[#10b981] resize-none"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="text-xs font-semibold text-[#808080] uppercase tracking-wider">
-                                Initial Stake (SOL)
-                            </label>
-                            <input
-                                type="number"
-                                value={stake}
-                                onChange={(e) => {
-                                    setStake(e.target.value)
-                                    setError("")
-                                }}
-                                min="0.005"
-                                step="0.001"
-                                className="mt-2 w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded px-3 py-2 text-[#e5e5e5] text-sm focus:outline-none focus:border-[#10b981]"
-                            />
-                            <p className="text-xs text-[#808080] mt-1">Pays for PDA rent + first batch (min: 0.005 SOL)</p>
-                            {Number(stake) < 0.005 && <p className="text-xs text-[#ef4444] mt-1">Minimum stake is 0.005 SOL</p>}
-                        </div>
-
-                        {error && (
-                            <div className="bg-[#ef4444] bg-opacity-10 border border-[#ef4444] rounded p-3">
-                                <p className="text-xs text-[#ef4444]">{error}</p>
-                            </div>
-                        )}
-
-                        <div className="flex gap-3 pt-4">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                disabled={isLoading}
-                                className="flex-1 bg-[#2a2a2a] border border-[#3a3a3a] rounded px-4 py-2 text-[#e5e5e5] text-sm font-medium hover:bg-[#3a3a3a] disabled:opacity-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={!isValid || isLoading}
-                                className="flex-1 bg-[#10b981] rounded px-4 py-2 text-white text-sm font-medium hover:bg-[#059669] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                {isLoading ? "Registering..." : "Register"}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+          <div>
+            <label className="text-xs text-muted-foreground block mb-2">Stake Amount (min 0.1 SOL)</label>
+            <div className="flex items-center">
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={formData.stake}
+                onChange={(e) => setFormData({ ...formData, stake: e.target.value })}
+                placeholder="0.5"
+                className="flex-1 px-3 py-2 bg-secondary border border-border rounded text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent font-mono text-sm"
+              />
+              <span className="ml-2 text-muted-foreground text-sm">SOL</span>
             </div>
-        </>
-    )
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-secondary border border-border rounded text-foreground hover:bg-secondary/80 transition-colors font-mono text-sm font-bold"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-accent text-accent-foreground border border-accent rounded hover:bg-accent/90 transition-colors font-mono text-sm font-bold"
+            >
+              Register
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
 }

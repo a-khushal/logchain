@@ -1,5 +1,5 @@
 {
-  "address": "EPg3oEpf92FNPecbPfX7vkjjNVbNq6NyAdgPj9thL9Mt",
+  "address": "9zoLvF6r9jcLwYQhvR1SDh6Nwk9NXLNncHCETaHk7sMi",
   "metadata": {
     "name": "logchain",
     "version": "0.1.0",
@@ -8,18 +8,61 @@
   },
   "instructions": [
     {
-      "name": "anchor_root",
+      "name": "add_log_entry",
       "discriminator": [
-        123,
-        31,
-        186,
-        67,
-        90,
-        205,
-        47,
-        87
+        42,
+        210,
+        137,
+        166,
+        54,
+        34,
+        50,
+        25
       ],
       "accounts": [
+        {
+          "name": "server_account",
+          "writable": true
+        },
+        {
+          "name": "log_entry",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "entry_data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "anchor_batch",
+      "discriminator": [
+        140,
+        176,
+        14,
+        153,
+        61,
+        146,
+        232,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "server_account",
+          "writable": true
+        },
         {
           "name": "trail",
           "writable": true,
@@ -45,8 +88,8 @@
                 ]
               },
               {
-                "kind": "arg",
-                "path": "server_id"
+                "kind": "account",
+                "path": "server_account"
               }
             ]
           }
@@ -63,21 +106,8 @@
       ],
       "args": [
         {
-          "name": "root",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
-        },
-        {
           "name": "batch_id",
           "type": "u64"
-        },
-        {
-          "name": "server_id",
-          "type": "string"
         },
         {
           "name": "log_count",
@@ -109,6 +139,114 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "deactivate_server",
+      "discriminator": [
+        116,
+        58,
+        72,
+        223,
+        17,
+        177,
+        251,
+        145
+      ],
+      "accounts": [
+        {
+          "name": "server_account",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "register_server",
+      "discriminator": [
+        41,
+        21,
+        9,
+        205,
+        172,
+        45,
+        50,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "server_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  114,
+                  118,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "server_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "stake",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "server_id",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "verify_entry",
+      "discriminator": [
+        19,
+        109,
+        48,
+        124,
+        244,
+        122,
+        229,
+        51
+      ],
+      "accounts": [
+        {
+          "name": "log_entry"
+        },
+        {
+          "name": "server_account"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -124,9 +262,61 @@
         66,
         26
       ]
+    },
+    {
+      "name": "LogEntry",
+      "discriminator": [
+        144,
+        171,
+        70,
+        10,
+        193,
+        153,
+        166,
+        90
+      ]
+    },
+    {
+      "name": "ServerAccount",
+      "discriminator": [
+        217,
+        98,
+        62,
+        130,
+        20,
+        150,
+        79,
+        126
+      ]
     }
   ],
   "events": [
+    {
+      "name": "EntryVerified",
+      "discriminator": [
+        167,
+        206,
+        88,
+        150,
+        189,
+        128,
+        119,
+        198
+      ]
+    },
+    {
+      "name": "LogEntryAdded",
+      "discriminator": [
+        153,
+        33,
+        253,
+        162,
+        226,
+        20,
+        50,
+        162
+      ]
+    },
     {
       "name": "RootAnchored",
       "discriminator": [
@@ -144,23 +334,48 @@
   "errors": [
     {
       "code": 6000,
+      "name": "ServerIdTooLong",
+      "msg": "Server ID is too long (max 32 chars)"
+    },
+    {
+      "code": 6001,
+      "name": "DescriptionTooLong",
+      "msg": "Description is too long (max 100 chars)"
+    },
+    {
+      "code": 6002,
+      "name": "ServerInactive",
+      "msg": "Server is not active"
+    },
+    {
+      "code": 6003,
       "name": "InvalidBatchSequence",
       "msg": "Batch ID must be sequential"
     },
     {
-      "code": 6001,
-      "name": "ServerIdTooLong",
-      "msg": "Server ID too long (max 32 chars)"
-    },
-    {
-      "code": 6002,
+      "code": 6004,
       "name": "InvalidLogCount",
-      "msg": "Log count must be 1-1000"
+      "msg": "Log count must be between 1 and 10000"
     },
     {
-      "code": 6003,
+      "code": 6005,
       "name": "Unauthorized",
-      "msg": "Only authority can close"
+      "msg": "Only authority can perform this action"
+    },
+    {
+      "code": 6006,
+      "name": "EntryTooLarge",
+      "msg": "Entry too large (max 1024 bytes)"
+    },
+    {
+      "code": 6007,
+      "name": "EntryServerMismatch",
+      "msg": "Entry server mismatch"
+    },
+    {
+      "code": 6008,
+      "name": "InsufficientEntries",
+      "msg": "Insufficient entries to anchor"
     }
   ],
   "types": [
@@ -170,13 +385,8 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "root",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
+            "name": "server",
+            "type": "pubkey"
           },
           {
             "name": "batch_id",
@@ -187,11 +397,20 @@
             "type": "u64"
           },
           {
-            "name": "server_id",
-            "type": "string"
+            "name": "root_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           },
           {
-            "name": "log_count",
+            "name": "entries_in_batch",
+            "type": "u64"
+          },
+          {
+            "name": "entries_anchored",
             "type": "u64"
           },
           {
@@ -201,6 +420,115 @@
           {
             "name": "authority",
             "type": "pubkey"
+          },
+          {
+            "name": "anchor_slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EntryVerified",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "server",
+            "type": "pubkey"
+          },
+          {
+            "name": "entry_index",
+            "type": "u64"
+          },
+          {
+            "name": "entry_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "verified_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LogEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "server",
+            "type": "pubkey"
+          },
+          {
+            "name": "entry_index",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "entry_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "previous_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "data_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "LogEntryAdded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "server",
+            "type": "pubkey"
+          },
+          {
+            "name": "entry_index",
+            "type": "u64"
+          },
+          {
+            "name": "entry_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
           }
         ]
       }
@@ -211,7 +539,15 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "root",
+            "name": "server",
+            "type": "pubkey"
+          },
+          {
+            "name": "batch_id",
+            "type": "u64"
+          },
+          {
+            "name": "root_hash",
             "type": {
               "array": [
                 "u8",
@@ -220,20 +556,65 @@
             }
           },
           {
-            "name": "batch_id",
+            "name": "entries_in_batch",
             "type": "u64"
+          },
+          {
+            "name": "entries_anchored",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ServerAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
           },
           {
             "name": "server_id",
             "type": "string"
           },
           {
-            "name": "log_count",
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "registered_at",
+            "type": "i64"
+          },
+          {
+            "name": "stake",
             "type": "u64"
           },
           {
-            "name": "timestamp",
-            "type": "i64"
+            "name": "entry_count",
+            "type": "u64"
+          },
+          {
+            "name": "last_entry_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "last_anchor_slot",
+            "type": "u64"
           }
         ]
       }
