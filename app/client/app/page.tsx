@@ -5,7 +5,7 @@ import Header from "@/components/header"
 import ProofPanel from "@/components/proof-panel"
 import StatusBar from "@/components/status-bar"
 import ServerManagement from "@/components/server-management"
-import LogViewer from "@/components/log-detail-modal"
+import LogManagement from "@/components/log-management"
 import { useWallet } from "@solana/wallet-adapter-react"
 
 export default function Home() {
@@ -33,7 +33,13 @@ export default function Home() {
           <ServerManagement selectedServer={selectedServer} onSelectServer={setSelectedServer} />
         </div>
         <div className="flex-1 flex flex-col border border-border rounded overflow-hidden">
-          <LogViewer selectedServer={selectedServer} autoScroll={autoScroll} />
+          {selectedServer ? (
+            <LogManagement serverId={selectedServer} />
+          ) : (
+            <div className="flex items-center justify-center text-muted-foreground">
+              Select a server to view logs
+            </div>
+          )}
         </div>
 
         <div className="w-72 flex flex-col border border-border rounded overflow-hidden">
