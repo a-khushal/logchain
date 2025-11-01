@@ -82,8 +82,8 @@ export default function ServerManagement({ selectedServer, onSelectServer }: Ser
                 key={server.serverId}
                 onClick={() => onSelectServer(server.serverId)}
                 className={`p-3 rounded cursor-pointer transition-colors border font-mono text-xs ${selectedServer === server.serverId
-                    ? "bg-accent text-accent-foreground border-accent"
-                    : "bg-card border-border hover:bg-secondary text-foreground"
+                  ? "bg-accent text-accent-foreground border-accent"
+                  : "bg-card border-border hover:bg-secondary text-foreground"
                   }`}
               >
                 <div className="font-bold">{server.serverId}</div>

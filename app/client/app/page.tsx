@@ -43,7 +43,7 @@ export default function Home() {
         </div>
 
         <div className="w-72 flex flex-col border border-border rounded overflow-hidden">
-          <ProofPanel />
+          <ProofPanel selectedServer={selectedServer} />
         </div>
       </div>
 
