@@ -55,31 +55,48 @@ export const useRegisterServer = () => {
     return useCallback(
         async (serverId: string, description: string, stakeAmount: number) => {
             if (!program || !publicKey) throw new Error("Wallet not connected")
+
             const [serverPDA] = PublicKey.findProgramAddressSync(
                 [Buffer.from("server"), Buffer.from(serverId)],
                 program.programId
             )
+
             const stakeAccount = Keypair.generate()
-            const tx = await program.methods
-                .registerServer(serverId, description)
-                .accountsStrict({
-                    serverAccount: serverPDA,
-                    authority: publicKey,
-                    stake: stakeAccount.publicKey,
-                    systemProgram: SystemProgram.programId,
-                })
-                .signers([stakeAccount])
-                .preInstructions([
-                    SystemProgram.createAccount({
-                        fromPubkey: publicKey,
-                        newAccountPubkey: stakeAccount.publicKey,
-                        lamports: stakeAmount,
-                        space: 0,
-                        programId: SystemProgram.programId,
-                    }),
-                ])
-                .rpc()
-            return { tx, serverPDA, stakeAccount }
+
+            try {
+                const tx = await program.methods
+                    .registerServer(serverId, description)
+                    .accountsStrict({
+                        serverAccount: serverPDA,
+                        authority: publicKey,
+                        stake: stakeAccount.publicKey,
+                        systemProgram: SystemProgram.programId,
+                    })
+                    .signers([stakeAccount])
+                    .preInstructions([
+                        SystemProgram.createAccount({
+                            fromPubkey: publicKey,
+                            newAccountPubkey: stakeAccount.publicKey,
+                            lamports: stakeAmount,
+                            space: 0,
+                            programId: SystemProgram.programId,
+                        }),
+                    ])
+                    .rpc({
+                        skipPreflight: false,
+                        maxRetries: 0, // Don't retry - let user handle retries
+                    })
+
+                return { tx, serverPDA, stakeAccount }
+            } catch (error: any) {
+                // Check if it's an "already processed" error
+                if (error.message && error.message.includes("already been processed")) {
+                    // Transaction likely succeeded, just wasn't confirmed in time
+                    console.log("Transaction already processed (likely succeeded)")
+                    return { tx: "already_processed", serverPDA, stakeAccount }
+                }
+                throw error
+            }
         },
         [program, publicKey]
     )
@@ -108,7 +125,10 @@ export const useAddLogEntry = () => {
                 systemProgram: SystemProgram.programId,
             })
             .signers([logEntryKeypair])
-            .rpc()
+            .rpc({
+                skipPreflight: false,
+                maxRetries: 0,
+            })
 
         return { tx, logEntryPDA: logEntryKeypair.publicKey }
     }, [program, publicKey])
@@ -148,7 +168,10 @@ export const useAnchorBatch = () => {
                     authority: publicKey,
                     systemProgram: SystemProgram.programId,
                 })
-                .rpc()
+                .rpc({
+                    skipPreflight: false,
+                    maxRetries: 0,
+                })
             return { tx, trailPDA }
         },
         [program, publicKey]
@@ -252,7 +275,10 @@ export const useVerifyEntry = () => {
                     logEntry: logEntryPDA,
                     serverAccount: serverPDA,
                 })
-                .rpc()
+                .rpc({
+                    skipPreflight: false,
+                    maxRetries: 0,
+                })
             return { tx }
         },
         [program]
@@ -276,7 +302,10 @@ export const useDeactivateServer = () => {
                     serverAccount: serverPDA,
                     authority: publicKey,
                 })
-                .rpc()
+                .rpc({
+                    skipPreflight: false,
+                    maxRetries: 0,
+                })
             return { tx }
         },
         [program, publicKey]

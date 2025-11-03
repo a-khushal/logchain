@@ -62,6 +62,7 @@ export default function RegisterServerModal({ onClose, onSuccess }: RegisterServ
 
       onSuccess?.(formData.serverId)
       setFormData({ serverId: "", description: "", stake: "0.1" })
+      submitInProgressRef.current = false
       onClose()
       return
     } catch (err) {
