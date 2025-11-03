@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useRef } from "react"
 import { useProgram } from "./useProgram"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { PublicKey, SystemProgram, Keypair } from "@solana/web3.js"
@@ -20,29 +20,78 @@ export interface ServerAccount {
     lastAnchorSlot: BN
 }
 
-export const clearServerCache = () => { }
+const serverCache = {
+    data: null as any[] | null,
+    timestamp: 0,
+    CACHE_TTL: 30000,
+    isValid() {
+        return this.data !== null && Date.now() - this.timestamp < this.CACHE_TTL
+    },
+    set(data: any[]) {
+        this.data = data
+        this.timestamp = Date.now()
+    },
+    get() {
+        return this.isValid() ? this.data : null
+    },
+    clear() {
+        this.data = null
+        this.timestamp = 0
+    }
+}
+
+export const clearServerCache = () => {
+    serverCache.clear()
+}
 
 export function useFetchAllServers() {
     const program = useProgram()
     const { connected } = useWallet()
+    const requestInProgressRef = useRef(false)
+    const pendingPromiseRef = useRef<Promise<any[]> | null>(null)
 
     const fetchAllServers = useCallback(async () => {
         if (!connected) throw new Error("Wallet not connected")
         if (!program) throw new Error("Program not initialized")
 
-        const run = async () => {
-            const servers = await program.account.serverAccount.all()
-            return servers.map((s: any) => ({
-                publicKey: s.publicKey,
-                ...s.account,
-            }))
+        const cached = serverCache.get()
+        if (cached) {
+            return cached
         }
 
-        return pRetry(run, {
-            retries: 5,
-            factor: 2,
-            minTimeout: 500,
-        })
+        if (requestInProgressRef.current && pendingPromiseRef.current) {
+            return pendingPromiseRef.current
+        }
+
+        requestInProgressRef.current = true
+
+        const promise = (async () => {
+            try {
+                const run = async () => {
+                    const servers = await program.account.serverAccount.all()
+                    return servers.map((s: any) => ({
+                        publicKey: s.publicKey,
+                        ...s.account,
+                    }))
+                }
+
+                const result = await pRetry(run, {
+                    retries: 2,
+                    factor: 2,
+                    minTimeout: 300,
+                    maxTimeout: 1000,
+                })
+
+                serverCache.set(result)
+                return result
+            } finally {
+                requestInProgressRef.current = false
+                pendingPromiseRef.current = null
+            }
+        })()
+
+        pendingPromiseRef.current = promise
+        return promise
     }, [connected, program])
 
     return fetchAllServers
@@ -84,15 +133,16 @@ export const useRegisterServer = () => {
                     ])
                     .rpc({
                         skipPreflight: false,
-                        maxRetries: 0, // Don't retry - let user handle retries
+                        maxRetries: 0,
                     })
+
+                clearServerCache()
 
                 return { tx, serverPDA, stakeAccount }
             } catch (error: any) {
-                // Check if it's an "already processed" error
                 if (error.message && error.message.includes("already been processed")) {
-                    // Transaction likely succeeded, just wasn't confirmed in time
                     console.log("Transaction already processed (likely succeeded)")
+                    clearServerCache()
                     return { tx: "already_processed", serverPDA, stakeAccount }
                 }
                 throw error
