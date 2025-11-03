@@ -16,7 +16,6 @@ export default function LogManagement({ serverId, isActive = true }: { serverId:
     const [isAdding, setIsAdding] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [logCount, setLogCount] = useState(0)
-    const [refetchTrigger, setRefetchTrigger] = useState(0)
     const { connected } = useWallet()
     const addLogEntry = useAddLogEntry()
 
@@ -38,8 +37,6 @@ export default function LogManagement({ serverId, isActive = true }: { serverId:
 
             await addLogEntry(serverId, Buffer.from(logData))
             setLogMessage("")
-            // Trigger refetch after successful log entry
-            setRefetchTrigger(prev => prev + 1)
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to add log entry")
         } finally {
@@ -91,53 +88,54 @@ export default function LogManagement({ serverId, isActive = true }: { serverId:
                 </div>
             </div>
 
-            <LogStream serverId={serverId} onLogCountChange={setLogCount} refetchTrigger={refetchTrigger} />
+            <LogStream serverId={serverId} onLogCountChange={setLogCount} />
 
-            <BatchAnchorCard serverId={serverId} logCount={logCount} refetchTrigger={refetchTrigger} />
+            <BatchAnchorCard serverId={serverId} logCount={logCount} />
         </div>
     )
 }
 
-function LogStream({ serverId, onLogCountChange, refetchTrigger }: { serverId: string; onLogCountChange: (count: number) => void; refetchTrigger: number }) {
+function LogStream({ serverId, onLogCountChange }: { serverId: string; onLogCountChange: (count: number) => void }) {
     const [logs, setLogs] = useState<any[]>([])
-    const [showLoading, setShowLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
+    const [refreshTrigger, setRefreshTrigger] = useState(0)
     const fetchLogEntries = useFetchLogEntries()
 
     useEffect(() => {
         let isMounted = true
-        let loadingTimeoutId: NodeJS.Timeout
-        let fetchTimeoutId: NodeJS.Timeout
 
         const fetchLogs = async () => {
             if (!serverId) return
 
-            loadingTimeoutId = setTimeout(() => {
-                if (isMounted) setShowLoading(true)
-            }, 500)
-
             try {
-                const entries = await fetchLogEntries(serverId)
+                const entries = await (fetchLogEntries as any)(serverId, true)
                 if (isMounted) {
                     setLogs(entries)
                     onLogCountChange(entries.length)
-                    setShowLoading(false)
                 }
             } catch (err) {
                 console.error("Failed to fetch logs:", err)
-                if (isMounted) setShowLoading(false)
+            } finally {
+                if (isMounted) setIsLoading(false)
             }
         }
 
-        fetchTimeoutId = setTimeout(fetchLogs, 400)
+        fetchLogs()
 
         return () => {
             isMounted = false
-            clearTimeout(loadingTimeoutId)
-            clearTimeout(fetchTimeoutId)
         }
-    }, [serverId, fetchLogEntries, onLogCountChange, refetchTrigger])
+    }, [serverId, refreshTrigger, fetchLogEntries])
 
-    if (showLoading && logs.length === 0) {
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setRefreshTrigger(prev => prev + 1)
+        }, 3000)
+
+        return () => clearInterval(timer)
+    }, [])
+
+    if (isLoading) {
         return (
             <div className="border border-border p-4 bg-card h-64 text-foreground">
                 <h3 className="text-accent font-mono text-sm font-bold mb-3">[LOG STREAM]</h3>
@@ -165,28 +163,39 @@ function LogStream({ serverId, onLogCountChange, refetchTrigger }: { serverId: s
 function LogEntry({ log }: { log: any }) {
     let levelColor = "text-muted-foreground"
     let levelText = "INFO"
+    let message = ""
+    let timestamp = ""
 
-    if (log.level === "WARNING") {
-        levelColor = "text-warning"
-        levelText = "WARNING"
-    } else if (log.level === "ERROR") {
-        levelColor = "text-destructive"
-        levelText = "ERROR"
+    if (log.data) {
+        levelText = log.data.level || "INFO"
+        message = log.data.message || ""
+        timestamp = log.data.timestamp ? new Date(log.data.timestamp).toLocaleTimeString() : ""
+
+        if (levelText === "WARNING") {
+            levelColor = "text-warning"
+        } else if (levelText === "ERROR") {
+            levelColor = "text-destructive"
+        }
+    } else if (log.dataBytes && log.dataBytes.length > 0) {
+        timestamp = log.timestamp ? new Date(Number(log.timestamp) * 1000).toLocaleTimeString() : ""
+        levelText = "DATA"
+        message = `[${log.dataBytes.join(", ")}]`
+    } else {
+        timestamp = log.timestamp ? new Date(Number(log.timestamp) * 1000).toLocaleTimeString() : ""
+        levelText = "DATA"
+        message = "[]"
     }
-
-    const timestamp = new Date(Number(log.timestamp) * 1000).toLocaleTimeString()
-    const entryHashShort = log.entryHash?.slice(0, 12).toString() || "?"
 
     return (
         <div className="font-mono text-xs border-b border-border/50 pb-1">
             <span className="text-muted-foreground">[{timestamp}]</span>
             <span className={`${levelColor} font-bold ml-2`}>{levelText.padEnd(7)}</span>
-            <span className="text-foreground ml-2">[{entryHashShort}]</span>
+            <span className="text-foreground ml-2 truncate">{message}</span>
         </div>
     )
 }
 
-function BatchAnchorCard({ serverId, logCount, refetchTrigger }: { serverId: string; logCount: number; refetchTrigger: number }) {
+function BatchAnchorCard({ serverId, logCount }: { serverId: string; logCount: number }) {
     const [isAnchoring, setIsAnchoring] = useState(false)
     const [trail, setTrail] = useState<any>(null)
     const [error, setError] = useState<string | null>(null)
@@ -213,7 +222,7 @@ function BatchAnchorCard({ serverId, logCount, refetchTrigger }: { serverId: str
         return () => {
             isMounted = false
         }
-    }, [serverId, fetchAuditTrail, refetchTrigger])
+    }, [serverId, fetchAuditTrail])
 
     const handleAnchorBatch = useCallback(async () => {
         if (!trail || isAnchoring || logCount === 0) return

@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-logchain = "9zoLvF6r9jcLwYQhvR1SDh6Nwk9NXLNncHCETaHk7sMi"
+logchain = "By33UGtQN9XjEUbV1Ak7K7waRHHncqE8K8zzqCEoKsqM"
 
 [registry]
 url = "https://api.apr.dev"

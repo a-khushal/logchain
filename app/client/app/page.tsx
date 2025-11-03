@@ -64,7 +64,7 @@ export default function Home() {
           {selectedServer ? (
             <LogManagement serverId={selectedServer} isActive={isServerActive} />
           ) : (
-            <div className="flex items-center justify-center text-muted-foreground">
+            <div className="flex items-center justify-center h-full text-muted-foreground">
               Select a server to view logs
             </div>
           )}

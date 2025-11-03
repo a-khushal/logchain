@@ -44,6 +44,14 @@ export const clearServerCache = () => {
     serverCache.clear()
 }
 
+export const clearLogEntriesCache = (serverId?: string) => {
+    if (serverId) {
+        logEntriesCache.delete(serverId)
+    } else {
+        logEntriesCache.clear()
+    }
+}
+
 export function useFetchAllServers() {
     const program = useProgram()
     const { connected } = useWallet()
@@ -133,7 +141,8 @@ export const useRegisterServer = () => {
                     ])
                     .rpc({
                         skipPreflight: false,
-                        maxRetries: 0,
+                        maxRetries: 5,
+                        preflightCommitment: "confirmed",
                     })
 
                 clearServerCache()
@@ -166,21 +175,31 @@ export const useAddLogEntry = () => {
 
         const logEntryKeypair = Keypair.generate()
 
-        const tx = await program.methods
-            .addLogEntry(entryData)
-            .accountsStrict({
-                serverAccount: serverPDA,
-                logEntry: logEntryKeypair.publicKey,
-                authority: publicKey,
-                systemProgram: SystemProgram.programId,
-            })
-            .signers([logEntryKeypair])
-            .rpc({
-                skipPreflight: false,
-                maxRetries: 0,
-            })
+        try {
+            const tx = await program.methods
+                .addLogEntry(entryData)
+                .accountsStrict({
+                    serverAccount: serverPDA,
+                    logEntry: logEntryKeypair.publicKey,
+                    authority: publicKey,
+                    systemProgram: SystemProgram.programId,
+                })
+                .signers([logEntryKeypair])
+                .rpc({
+                    skipPreflight: false,
+                    maxRetries: 5,
+                    preflightCommitment: "confirmed",
+                })
 
-        return { tx, logEntryPDA: logEntryKeypair.publicKey }
+            clearLogEntriesCache(serverId)
+            return { tx, logEntryPDA: logEntryKeypair.publicKey }
+        } catch (error: any) {
+            if (error.message && error.message.includes("already been processed")) {
+                clearLogEntriesCache(serverId)
+                return { tx: "already_processed", logEntryPDA: logEntryKeypair.publicKey }
+            }
+            throw error
+        }
     }, [program, publicKey])
 }
 
@@ -210,19 +229,27 @@ export const useAnchorBatch = () => {
 
             const batchId = trail ? (trail.nextBatchId.toNumber ? trail.nextBatchId.toNumber() : Number(trail.nextBatchId)) : 0
 
-            const tx = await program.methods
-                .anchorBatch(new BN(batchId), new BN(logCount))
-                .accountsStrict({
-                    serverAccount: serverPDA,
-                    trail: trailPDA,
-                    authority: publicKey,
-                    systemProgram: SystemProgram.programId,
-                })
-                .rpc({
-                    skipPreflight: false,
-                    maxRetries: 0,
-                })
-            return { tx, trailPDA }
+            try {
+                const tx = await program.methods
+                    .anchorBatch(new BN(batchId), new BN(logCount))
+                    .accountsStrict({
+                        serverAccount: serverPDA,
+                        trail: trailPDA,
+                        authority: publicKey,
+                        systemProgram: SystemProgram.programId,
+                    })
+                    .rpc({
+                        skipPreflight: false,
+                        maxRetries: 5,
+                        preflightCommitment: "confirmed",
+                    })
+                return { tx, trailPDA }
+            } catch (error: any) {
+                if (error.message && error.message.includes("already been processed")) {
+                    return { tx: "already_processed", trailPDA }
+                }
+                throw error
+            }
         },
         [program, publicKey]
     )
@@ -283,32 +310,94 @@ export const useFetchAuditTrail = () => {
     )
 }
 
+const logEntriesCache = new Map<string, { data: any[], timestamp: number }>()
+const logEntriesRequestsInProgress = new Map<string, Promise<any[]>>()
+
 export const useFetchLogEntries = () => {
     const program = useProgram()
     return useCallback(
         async (serverId: string) => {
             if (!program) return []
 
-            const [serverPDA] = PublicKey.findProgramAddressSync(
-                [Buffer.from("server"), Buffer.from(serverId)],
-                program.programId
-            )
+            const cached = logEntriesCache.get(serverId)
+            if (cached) {
+                return cached.data
+            }
 
-            const logEntries = await program.account.logEntry.all()
-            return logEntries
-                .filter((le: any) => {
-                    return le.account.server &&
-                        le.account.server.equals(serverPDA)
-                })
-                .map((le: any) => ({
-                    publicKey: le.publicKey,
-                    server: le.account.server,
-                    entryIndex: le.account.entryIndex,
-                    timestamp: le.account.timestamp,
-                    entryHash: le.account.entryHash,
-                    previousHash: le.account.previousHash,
-                    dataHash: le.account.dataHash,
-                }))
+            if (logEntriesRequestsInProgress.has(serverId)) {
+                return logEntriesRequestsInProgress.get(serverId)!
+            }
+
+            const promise = (async () => {
+                try {
+                    const [serverPDA] = PublicKey.findProgramAddressSync(
+                        [Buffer.from("server"), Buffer.from(serverId)],
+                        program.programId
+                    )
+
+                    let logEntries: any = []
+                    try {
+                        logEntries = await program.account.logEntry.all()
+                    } catch (err) {
+                        console.warn("Some log entries may have incompatible schema:", err)
+                        logEntries = []
+                    }
+
+                    const result = logEntries
+                        .filter((le: any) => {
+                            try {
+                                return le.account.server &&
+                                    le.account.server.equals(serverPDA)
+                            } catch (err) {
+                                return false
+                            }
+                        })
+                        .map((le: any) => {
+                            let dataBytes: any = []
+                            let decodedData = null
+
+                            const dataField = le.account.data
+
+                            if (dataField && dataField.length > 0) {
+                                if (dataField instanceof Uint8Array || Buffer.isBuffer(dataField)) {
+                                    dataBytes = Array.from(dataField)
+                                } else if (Array.isArray(dataField)) {
+                                    dataBytes = dataField
+                                } else if (typeof dataField === 'string') {
+                                    dataBytes = Buffer.from(dataField, 'utf-8')
+                                    dataBytes = Array.from(dataBytes)
+                                }
+
+                                try {
+                                    const buffer = Buffer.isBuffer(dataField) ? dataField : Buffer.from(dataField)
+                                    decodedData = JSON.parse(buffer.toString('utf-8'))
+                                } catch (err) {
+                                    null
+                                }
+                            }
+
+                            return {
+                                publicKey: le.publicKey,
+                                server: le.account.server,
+                                entryIndex: le.account.entryIndex,
+                                timestamp: le.account.timestamp,
+                                entryHash: le.account.entryHash,
+                                previousHash: le.account.previousHash,
+                                dataHash: le.account.dataHash,
+                                data: decodedData,
+                                dataBytes: dataBytes,
+                            }
+                        })
+
+                    logEntriesCache.set(serverId, { data: result, timestamp: Date.now() })
+                    return result
+                } finally {
+                    logEntriesRequestsInProgress.delete(serverId)
+                }
+            })()
+
+            logEntriesRequestsInProgress.set(serverId, promise)
+            return promise
         },
         [program]
     )
@@ -327,7 +416,6 @@ export const useVerifyEntry = () => {
                 })
                 .rpc({
                     skipPreflight: false,
-                    maxRetries: 0,
                 })
             return { tx }
         },
@@ -354,7 +442,6 @@ export const useDeactivateServer = () => {
                 })
                 .rpc({
                     skipPreflight: false,
-                    maxRetries: 0,
                 })
             return { tx }
         },

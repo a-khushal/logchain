@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use sha2::{Digest, Sha256};
 
-declare_id!("9zoLvF6r9jcLwYQhvR1SDh6Nwk9NXLNncHCETaHk7sMi");
+declare_id!("By33UGtQN9XjEUbV1Ak7K7waRHHncqE8K8zzqCEoKsqM");
 
 #[program]
 pub mod logchain {
@@ -58,6 +58,7 @@ pub mod logchain {
             let hash = hasher.finalize();
             hash.as_slice().try_into().unwrap()
         };
+        log_entry.data = entry_data;
 
         server.last_entry_hash = entry_hash_bytes;
         server.entry_count += 1;
@@ -276,6 +277,8 @@ pub struct LogEntry {
     pub entry_hash: [u8; 32],
     pub previous_hash: [u8; 32],
     pub data_hash: [u8; 32],
+    #[max_len(1024)]
+    pub data: Vec<u8>
 }
 
 #[account]

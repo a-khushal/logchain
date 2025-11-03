@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/logchain.json`.
  */
 export type Logchain = {
-  "address": "9zoLvF6r9jcLwYQhvR1SDh6Nwk9NXLNncHCETaHk7sMi",
+  "address": "By33UGtQN9XjEUbV1Ak7K7waRHHncqE8K8zzqCEoKsqM",
   "metadata": {
     "name": "logchain",
     "version": "0.1.0",
@@ -506,6 +506,10 @@ export type Logchain = {
                 32
               ]
             }
+          },
+          {
+            "name": "data",
+            "type": "bytes"
           }
         ]
       }
