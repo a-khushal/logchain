@@ -187,10 +187,16 @@ function LogEntry({ log }: { log: any }) {
     }
 
     return (
-        <div className="font-mono text-xs border-b border-border/50 pb-1">
-            <span className="text-muted-foreground">[{timestamp}]</span>
-            <span className={`${levelColor} font-bold ml-2`}>{levelText.padEnd(7)}</span>
-            <span className="text-foreground ml-2 truncate">{message}</span>
+        <div className="font-mono text-xs border-b border-border/50 pb-2 mb-2 hover:bg-secondary/50 p-2 rounded transition-colors">
+            <div className="flex items-start gap-3 mb-1">
+                <span className="text-muted-foreground min-w-fit">[{timestamp}]</span>
+                <span className={`${levelColor} font-bold min-w-fit px-2 py-0.5 rounded text-xs ${levelText === "ERROR" ? "bg-destructive/20 text-destructive" : levelText === "WARNING" ? "bg-yellow-500/20 text-yellow-500" : "bg-accent/20"}`}>
+                    {levelText}
+                </span>
+            </div>
+            <div className="text-foreground wrap-break-words pl-2 text-xs leading-relaxed">
+                {message}
+            </div>
         </div>
     )
 }
